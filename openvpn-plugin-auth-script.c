@@ -1,10 +1,10 @@
 /*
  * auth-script OpenVPN plugin
- * 
+ *
  * Runs an external script to decide whether to authenticate a user or not.
  * Useful for checking 2FA on VPN auth attempts as it doesn't block the main
  * openvpn process, unlike passing the script to --auth-user-pass-verify.
- * 
+ *
  * Functions required to be a valid OpenVPN plugin:
  * openvpn_plugin_open_v3
  * openvpn_plugin_func_v3
@@ -32,33 +32,33 @@
 #define SCRIPT_NAME_IDX 0
 
 /* Where we store our own settings/state */
-struct plugin_context 
+struct plugin_context
 {
         plugin_log_t plugin_log;
         const char *argv[];
 };
 
 /* Handle an authentication request */
-static int deferred_handler(struct plugin_context *context, 
+static int deferred_handler(struct plugin_context *context,
                 const char *envp[])
 {
         plugin_log_t log = context->plugin_log;
         pid_t pid;
 
-        log(PLOG_DEBUG, PLUGIN_NAME, 
-                        "Deferred handler using script_path=%s", 
+        log(PLOG_DEBUG, PLUGIN_NAME,
+                        "Deferred handler using script_path=%s",
                         context->argv[SCRIPT_NAME_IDX]);
 
         pid = fork();
 
         /* Parent - child failed to fork */
         if (pid < 0) {
-                log(PLOG_ERR, PLUGIN_NAME, 
+                log(PLOG_ERR, PLUGIN_NAME,
                                 "pid failed < 0 check, got %d", pid);
                 return OPENVPN_PLUGIN_FUNC_ERROR;
         }
 
-        /* Parent - child forked successfully 
+        /* Parent - child forked successfully
          *
          * Here we wait until that child completes before notifying OpenVPN of
          * our status.
@@ -68,7 +68,7 @@ static int deferred_handler(struct plugin_context *context,
                 int wstatus;
 
                 log(PLOG_DEBUG, PLUGIN_NAME, "child pid is %d", pid);
-                
+
                 /* Block until the child returns */
                 wait_rc = waitpid(pid, &wstatus, 0);
 
@@ -84,8 +84,8 @@ static int deferred_handler(struct plugin_context *context,
                  * other return indicates an abnormal termination.
                  */
                 if (WIFEXITED(wstatus)) {
-                        log(PLOG_DEBUG, PLUGIN_NAME, 
-                                        "child pid %d exited with status %d", 
+                        log(PLOG_DEBUG, PLUGIN_NAME,
+                                        "child pid %d exited with status %d",
                                         pid, WEXITSTATUS(wstatus));
                         return WEXITSTATUS(wstatus);
                 }
@@ -101,15 +101,15 @@ static int deferred_handler(struct plugin_context *context,
         pid = fork();
 
         /* Notify our parent that our child faild to fork */
-        if (pid < 0) 
+        if (pid < 0)
                 exit(OPENVPN_PLUGIN_FUNC_ERROR);
-        
+
         /* Let our parent know that our child is working appropriately */
         if (pid > 0)
                 exit(OPENVPN_PLUGIN_FUNC_DEFERRED);
 
         /* Child Spawn - This process actually spawns the script */
-        
+
         /* Daemonize */
         umask(0);
         setsid();
@@ -123,37 +123,37 @@ static int deferred_handler(struct plugin_context *context,
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
 
-        int execve_rc = execve(context->argv[0], 
-                        (char *const*)context->argv, 
+        int execve_rc = execve(context->argv[0],
+                        (char *const*)context->argv,
                         (char *const*)envp);
         if ( execve_rc == -1 ) {
                 switch(errno) {
                         case E2BIG:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: E2BIG");
                                 break;
                         case EACCES:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: EACCES");
                                 break;
                         case EAGAIN:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: EAGAIN");
                                 break;
                         case EFAULT:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: EFAULT");
                                 break;
                         case EINTR:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: EINTR");
                                 break;
                         case EINVAL:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: EINVAL");
                                 break;
                         case ELOOP:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ELOOP");
                                 break;
                         case ENAMETOOLONG:
@@ -161,32 +161,32 @@ static int deferred_handler(struct plugin_context *context,
                                                 "Error trying to exec: ENAMETOOLONG");
                                 break;
                         case ENOENT:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ENOENT");
                                 break;
                         case ENOEXEC:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ENOEXEC");
                                 break;
                         case ENOLINK:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ENOLINK");
                                 break;
                         case ENOMEM:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ENOMEM");
                                 break;
                         case ENOTDIR:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ENOTDIR");
                                 break;
                         case ETXTBSY:
-                                log(PLOG_DEBUG, PLUGIN_NAME, 
+                                log(PLOG_DEBUG, PLUGIN_NAME,
                                                 "Error trying to exec: ETXTBSY");
                                 break;
                         default:
-                                log(PLOG_ERR, PLUGIN_NAME, 
-                                                "Error trying to exec: unknown, errno: %d", 
+                                log(PLOG_ERR, PLUGIN_NAME,
+                                                "Error trying to exec: unknown, errno: %d",
                                                 errno);
                 }
         }
@@ -199,7 +199,7 @@ OPENVPN_EXPORT int openvpn_plugin_min_version_required_v1()
         return OPENVPN_PLUGIN_VERSION_MIN;
 }
 
-/* 
+/*
  * Handle plugin initialization
  *        arguments->argv[0] is path to shared lib
  *        arguments->argv[1] is expected to be path to script
@@ -215,7 +215,7 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(const int struct_version,
 
         /* Safeguard on openvpn versions */
         if (struct_version < OPENVPN_PLUGINv3_STRUCTVER) {
-                log(PLOG_ERR, PLUGIN_NAME, 
+                log(PLOG_ERR, PLUGIN_NAME,
                                 "ERROR: struct version was older than required");
                 return OPENVPN_PLUGIN_FUNC_ERROR;
         }
@@ -224,7 +224,7 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(const int struct_version,
         retptr->type_mask = OPENVPN_PLUGIN_MASK(
                         OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY);
 
-        
+
         /*
          * Determine the size of the arguments provided so we can allocate and
          * argv array of appropriate length.
@@ -234,9 +234,9 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(const int struct_version,
                 arg_size += strlen(arguments->argv[arg_idx]);
 
 
-        /* 
+        /*
          * Plugin init will fail unless we create a handler, so we'll store our
-         * script path and it's arguments there as we have to create it anyway. 
+         * script path and it's arguments there as we have to create it anyway.
          */
         context = (struct plugin_context *) malloc(
                         sizeof(struct plugin_context) + arg_size);
@@ -244,7 +244,7 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(const int struct_version,
         context->plugin_log = log;
 
 
-        /* 
+        /*
          * Check we've been handed a script path to call
          * This comes directly from openvpn config file:
          *           plugin /path/to/auth.so /path/to/auth/script.sh
@@ -257,15 +257,15 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(const int struct_version,
         if (arg_size > 0) {
                 memcpy(&context->argv, &arguments->argv[1], arg_size);
 
-                log(PLOG_DEBUG, PLUGIN_NAME, 
-                                "script_path=%s", 
+                log(PLOG_DEBUG, PLUGIN_NAME,
+                                "script_path=%s",
                                 context->argv[SCRIPT_NAME_IDX]);
         } else {
                 free(context);
-                log(PLOG_ERR, PLUGIN_NAME, 
+                log(PLOG_ERR, PLUGIN_NAME,
                                 "ERROR: no script_path specified in config file");
                 return OPENVPN_PLUGIN_FUNC_ERROR;
-        }        
+        }
 
         /* Pass state back to OpenVPN so we get handed it back later */
         retptr->handle = (openvpn_plugin_handle_t) context;
@@ -281,7 +281,7 @@ OPENVPN_EXPORT int openvpn_plugin_func_v3(const int struct_version,
                 struct openvpn_plugin_args_func_return *retptr)
 {
         (void)retptr; /* Squish -Wunused-parameter warning */
-        struct plugin_context *context = 
+        struct plugin_context *context =
                 (struct plugin_context *) arguments->handle;
         plugin_log_t log = context->plugin_log;
 
@@ -289,7 +289,7 @@ OPENVPN_EXPORT int openvpn_plugin_func_v3(const int struct_version,
 
         /* Safeguard on openvpn versions */
         if (struct_version < OPENVPN_PLUGINv3_STRUCTVER) {
-                log(PLOG_ERR, PLUGIN_NAME, 
+                log(PLOG_ERR, PLUGIN_NAME,
                                 "ERROR: struct version was older than required");
                 return OPENVPN_PLUGIN_FUNC_ERROR;
         }
