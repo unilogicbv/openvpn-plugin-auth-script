@@ -114,11 +114,7 @@ static int deferred_handler(struct plugin_context *context,
         umask(0);
         setsid();
 
-        /* Close open files and move to root */
-        int chdir_rc = chdir("/");
-        if (chdir_rc < 0)
-                log(PLOG_DEBUG, PLUGIN_NAME,
-                                "Error trying to change pwd to \'/\'");
+        /* Close open files */
         close(STDIN_FILENO);
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
